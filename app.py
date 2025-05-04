@@ -25,23 +25,22 @@ def salvar_cliente(nome, c1, c2):
     else:
         df = pd.DataFrame(columns=["Nome", "CACEAL1", "CACEAL2"])
 
-    # Forçar colunas corretas
-    df = df[["Nome", "CACEAL1", "CACEAL2"]] if not df.empty else pd.DataFrame(columns=["Nome", "CACEAL1", "CACEAL2"])
-
     novo = pd.DataFrame([[nome, c1, c2]], columns=["Nome", "CACEAL1", "CACEAL2"])
     df = pd.concat([df, novo], ignore_index=True)
     df.to_csv(CAMINHO_CLIENTES, index=False)
 
+# MENU
 aba = st.sidebar.radio("Menu", ["📋 Cadastrar Clientes", "🔎 Consultar Publicações"])
 
+# ABA 1 - CADASTRO
 if aba == "📋 Cadastrar Clientes":
     st.subheader("Cadastro de Clientes")
-    with st.form("cadastro_cliente"):
+    with st.form("form_cadastro"):
         nome = st.text_input("Nome do Cliente")
         caceal1 = st.text_input("CACEAL 1")
         caceal2 = st.text_input("CACEAL 2")
-        submitted = st.form_submit_button("Salvar Cliente")
-        if submitted and nome and caceal1:
+        enviar = st.form_submit_button("Salvar Cliente")
+        if enviar and nome and caceal1:
             salvar_cliente(nome, caceal1, caceal2)
             st.success("✅ Cliente salvo com sucesso!")
 
@@ -49,34 +48,40 @@ if aba == "📋 Cadastrar Clientes":
     st.subheader("📄 Clientes Cadastrados")
     st.dataframe(carregar_clientes())
 
+# ABA 2 - CONSULTA
 if aba == "🔎 Consultar Publicações":
-    st.subheader("Buscar Publicações")
+    st.subheader("Consulta por Período")
     df_clientes = carregar_clientes()
-    cliente_sel = st.selectbox("👤 Selecione um cliente", df_clientes["Nome"].unique() if not df_clientes.empty else [])
-
-    if cliente_sel:
+    
+    if df_clientes.empty:
+        st.warning("Nenhum cliente cadastrado.")
+    else:
+        cliente_sel = st.selectbox("👤 Selecione o cliente", df_clientes["Nome"].unique())
         dados_cliente = df_clientes[df_clientes["Nome"] == cliente_sel].iloc[0]
         c1 = dados_cliente["CACEAL1"]
         c2 = dados_cliente["CACEAL2"]
 
         col1, col2 = st.columns(2)
         with col1:
-            data_inicio = st.date_input("📅 Data Início")
+            data_inicio = st.date_input("Data Inicial")
         with col2:
-            data_fim = st.date_input("📅 Data Fim")
+            data_fim = st.date_input("Data Final")
 
         if st.button("🔍 Buscar Publicações"):
             datas = pd.date_range(data_inicio, data_fim)
             resultados = []
 
-            with st.spinner("Consultando edições..."):
+            with st.spinner("🔎 Verificando edições..."):
                 for data in datas:
                     data_str = data.strftime("%Y-%m-%d")
-                    r = requests.get(f"https://diario.imprensaoficial.al.gov.br/apinova/api/editions/searchEditionByDate?editionDate={data_str}")
+                    url = f"https://diario.imprensaoficial.al.gov.br/apinova/api/editions/searchEditionByDate?editionDate={data_str}"
+                    r = requests.get(url)
+
                     if r.status_code == 200 and r.json():
                         edicao_id = r.json()[0]["id"]
                         pdf_url = f"https://diario.imprensaoficial.al.gov.br/apinova/api/editions/downloadPdf/{edicao_id}"
                         pdf_res = requests.get(pdf_url)
+
                         if pdf_res.status_code == 200:
                             reader = PdfReader(BytesIO(pdf_res.content))
                             for i, page in enumerate(reader.pages):
@@ -90,15 +95,16 @@ if aba == "🔎 Consultar Publicações":
                                         "Cliente": cliente_sel,
                                         "CACEAL": caceal_encontrado
                                     })
+                                    # Exibir imagem da página
                                     with tempfile.TemporaryDirectory() as path:
-                                        images = convert_from_bytes(pdf_res.content, first_page=i+1, last_page=i+1, output_folder=path)
-                                        st.image(images[0], caption=f"🗓️ {data.strftime('%d/%m/%Y')} • Cliente: {cliente_sel} • CACEAL: {caceal_encontrado}", use_column_width=True)
+                                        imagem = convert_from_bytes(pdf_res.content, first_page=i+1, last_page=i+1, output_folder=path)
+                                        st.image(imagem[0], caption=f"{data.strftime('%d/%m/%Y')} - {cliente_sel}", use_column_width=True)
                                     break
 
             if resultados:
                 df_resultado = pd.DataFrame(resultados)
-                st.success("✅ Publicações encontradas no período selecionado.")
+                st.success("✅ Publicações encontradas.")
                 st.dataframe(df_resultado)
-                st.download_button("📥 Baixar Excel", df_resultado.to_excel(index=False, engine='openpyxl'), file_name="publicacoes_resultado.xlsx")
+                st.download_button("📥 Baixar Excel", df_resultado.to_excel(index=False, engine="openpyxl"), file_name="resultado_consulta.xlsx")
             else:
-                st.warning("Nenhuma publicação encontrada no período e cliente selecionados.")
+                st.warning("Nenhuma publicação encontrada no período informado.")
