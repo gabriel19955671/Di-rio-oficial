@@ -15,7 +15,7 @@ CAMINHO_CLIENTES = "clientes.csv"
 
 def carregar_clientes():
     if os.path.exists(CAMINHO_CLIENTES):
-        return pd.read_csv(CAMINHO_CLIENTES)
+        return pd.read_csv(CAMINHO_CLIENTES, sep=",")
     else:
         return pd.DataFrame(columns=["Nome", "CACEAL1", "CACEAL2"])
 
