@@ -20,14 +20,20 @@ def carregar_clientes():
         return pd.DataFrame(columns=["Nome", "CACEAL1", "CACEAL2"])
 
 def salvar_cliente(nome, c1, c2):
-    df = carregar_clientes()
-    novo = pd.DataFrame([[nome, c1, c2]], columns=df.columns)
+    if os.path.exists(CAMINHO_CLIENTES):
+        df = pd.read_csv(CAMINHO_CLIENTES)
+    else:
+        df = pd.DataFrame(columns=["Nome", "CACEAL1", "CACEAL2"])
+
+    if df.empty or df.columns.tolist() != ["Nome", "CACEAL1", "CACEAL2"]:
+        df = pd.DataFrame(columns=["Nome", "CACEAL1", "CACEAL2"])
+
+    novo = pd.DataFrame([[nome, c1, c2]], columns=["Nome", "CACEAL1", "CACEAL2"])
     df = pd.concat([df, novo], ignore_index=True)
     df.to_csv(CAMINHO_CLIENTES, index=False)
 
 aba = st.sidebar.radio("Menu", ["📋 Cadastrar Clientes", "🔎 Consultar Publicações"])
 
-# --- Aba 1: Cadastro de Clientes ---
 if aba == "📋 Cadastrar Clientes":
     st.subheader("Cadastro de Clientes")
     with st.form("cadastro_cliente"):
@@ -43,12 +49,11 @@ if aba == "📋 Cadastrar Clientes":
     st.subheader("📄 Clientes Cadastrados")
     st.dataframe(carregar_clientes())
 
-# --- Aba 2: Consulta ---
 if aba == "🔎 Consultar Publicações":
-    st.subheader("Buscar Publicações")
+    st.subheader("Buscar Publicações por Cliente")
     df_clientes = carregar_clientes()
     cliente_sel = st.selectbox("👤 Selecione um cliente", df_clientes["Nome"].unique() if not df_clientes.empty else [])
-    
+
     if cliente_sel:
         dados_cliente = df_clientes[df_clientes["Nome"] == cliente_sel].iloc[0]
         c1 = dados_cliente["CACEAL1"]
@@ -64,7 +69,7 @@ if aba == "🔎 Consultar Publicações":
             datas = pd.date_range(data_inicio, data_fim)
             resultados = []
 
-            with st.spinner("Consultando edições..."):
+            with st.spinner("Consultando edições publicadas..."):
                 for data in datas:
                     data_str = data.strftime("%Y-%m-%d")
                     r = requests.get(f"https://diario.imprensaoficial.al.gov.br/apinova/api/editions/searchEditionByDate?editionDate={data_str}")
@@ -78,22 +83,23 @@ if aba == "🔎 Consultar Publicações":
                                 texto = page.extract_text()
                                 if not texto:
                                     continue
-                                if any(x.lower() in texto.lower() for x in [cliente_sel, c1, c2]):
+                                if any(x.lower() in texto.lower() for x in [cliente_sel.lower(), c1.lower(), c2.lower()]):
                                     caceal_encontrado = c1 if c1 in texto else c2
                                     resultados.append({
-                                        "Data": data.strftime("%d/%m/%Y"),
+                                        "Data da Publicação": data.strftime("%d/%m/%Y"),
                                         "Cliente": cliente_sel,
                                         "CACEAL": caceal_encontrado
                                     })
-                                    st.success(f"✅ Publicação em {data.strftime('%d/%m/%Y')} - Página {i+1}")
+                                    # Mostrar imagem da página encontrada
                                     with tempfile.TemporaryDirectory() as path:
                                         images = convert_from_bytes(pdf_res.content, first_page=i+1, last_page=i+1, output_folder=path)
-                                        st.image(images[0], caption=f"Página {i+1}", use_column_width=True)
+                                        st.image(images[0], caption=f"🗓️ {data.strftime('%d/%m/%Y')} • Cliente: {cliente_sel} • CACEAL: {caceal_encontrado}", use_column_width=True)
                                     break
 
             if resultados:
                 df_resultado = pd.DataFrame(resultados)
+                st.success("✅ Publicações encontradas no período selecionado.")
                 st.dataframe(df_resultado)
                 st.download_button("📥 Baixar Excel", df_resultado.to_excel(index=False, engine='openpyxl'), file_name="publicacoes_resultado.xlsx")
             else:
-                st.warning("Nenhuma publicação encontrada para esse cliente no período informado.")
+                st.warning("Nenhuma publicação encontrada no período e cliente selecionados.")
