@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 import requests
 from PyPDF2 import PdfReader
 from io import BytesIO
@@ -21,12 +21,12 @@ def carregar_clientes():
 
 def salvar_cliente(nome, c1, c2):
     if os.path.exists(CAMINHO_CLIENTES):
-        df = pd.read_csv(CAMINHO_CLIENTES)
+        df = pd.read_csv(CAMINHO_CLIENTES, sep=",")
     else:
         df = pd.DataFrame(columns=["Nome", "CACEAL1", "CACEAL2"])
 
-    if df.empty or df.columns.tolist() != ["Nome", "CACEAL1", "CACEAL2"]:
-        df = pd.DataFrame(columns=["Nome", "CACEAL1", "CACEAL2"])
+    # Forçar colunas corretas
+    df = df[["Nome", "CACEAL1", "CACEAL2"]] if not df.empty else pd.DataFrame(columns=["Nome", "CACEAL1", "CACEAL2"])
 
     novo = pd.DataFrame([[nome, c1, c2]], columns=["Nome", "CACEAL1", "CACEAL2"])
     df = pd.concat([df, novo], ignore_index=True)
@@ -34,7 +34,6 @@ def salvar_cliente(nome, c1, c2):
 
 aba = st.sidebar.radio("Menu", ["📋 Cadastrar Clientes", "🔎 Consultar Publicações"])
 
-# --- Aba 1: Cadastro de Clientes ---
 if aba == "📋 Cadastrar Clientes":
     st.subheader("Cadastro de Clientes")
     with st.form("cadastro_cliente"):
@@ -50,12 +49,11 @@ if aba == "📋 Cadastrar Clientes":
     st.subheader("📄 Clientes Cadastrados")
     st.dataframe(carregar_clientes())
 
-# --- Aba 2: Consulta ---
 if aba == "🔎 Consultar Publicações":
     st.subheader("Buscar Publicações")
     df_clientes = carregar_clientes()
     cliente_sel = st.selectbox("👤 Selecione um cliente", df_clientes["Nome"].unique() if not df_clientes.empty else [])
-    
+
     if cliente_sel:
         dados_cliente = df_clientes[df_clientes["Nome"] == cliente_sel].iloc[0]
         c1 = dados_cliente["CACEAL1"]
@@ -85,22 +83,22 @@ if aba == "🔎 Consultar Publicações":
                                 texto = page.extract_text()
                                 if not texto:
                                     continue
-                                if any(x.lower() in texto.lower() for x in [cliente_sel, c1, c2]):
+                                if any(x.lower() in texto.lower() for x in [cliente_sel.lower(), c1.lower(), c2.lower()]):
                                     caceal_encontrado = c1 if c1 in texto else c2
                                     resultados.append({
-                                        "Data": data.strftime("%d/%m/%Y"),
+                                        "Data da Publicação": data.strftime("%d/%m/%Y"),
                                         "Cliente": cliente_sel,
                                         "CACEAL": caceal_encontrado
                                     })
-                                    st.success(f"✅ Publicação em {data.strftime('%d/%m/%Y')} - Página {i+1}")
                                     with tempfile.TemporaryDirectory() as path:
                                         images = convert_from_bytes(pdf_res.content, first_page=i+1, last_page=i+1, output_folder=path)
-                                        st.image(images[0], caption=f"Página {i+1}", use_column_width=True)
+                                        st.image(images[0], caption=f"🗓️ {data.strftime('%d/%m/%Y')} • Cliente: {cliente_sel} • CACEAL: {caceal_encontrado}", use_column_width=True)
                                     break
 
             if resultados:
                 df_resultado = pd.DataFrame(resultados)
+                st.success("✅ Publicações encontradas no período selecionado.")
                 st.dataframe(df_resultado)
                 st.download_button("📥 Baixar Excel", df_resultado.to_excel(index=False, engine='openpyxl'), file_name="publicacoes_resultado.xlsx")
             else:
-                st.warning("Nenhuma publicação encontrada para esse cliente no período informado.")
+                st.warning("Nenhuma publicação encontrada no período e cliente selecionados.")
