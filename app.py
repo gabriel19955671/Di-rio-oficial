@@ -95,7 +95,6 @@ if aba == "🔎 Consultar Publicações":
                                         "Cliente": cliente_sel,
                                         "CACEAL": caceal_encontrado
                                     })
-                                    # Exibir imagem da página
                                     with tempfile.TemporaryDirectory() as path:
                                         imagem = convert_from_bytes(pdf_res.content, first_page=i+1, last_page=i+1, output_folder=path)
                                         st.image(imagem[0], caption=f"{data.strftime('%d/%m/%Y')} - {cliente_sel}", use_column_width=True)
