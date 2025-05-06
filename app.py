@@ -13,15 +13,23 @@ st.title("📑 Monitor Diário Oficial de Alagoas")
 
 CAMINHO_CLIENTES = "clientes.csv"
 
+# Função para carregar clientes cadastrados
 def carregar_clientes():
     if os.path.exists(CAMINHO_CLIENTES):
-        return pd.read_csv(CAMINHO_CLIENTES, sep=";")
+        try:
+            return pd.read_csv(CAMINHO_CLIENTES, sep=";")
+        except Exception:
+            return pd.DataFrame(columns=["Nome", "CACEAL1", "CACEAL2"])
     else:
         return pd.DataFrame(columns=["Nome", "CACEAL1", "CACEAL2"])
 
+# Função para salvar novo cliente
 def salvar_cliente(nome, c1, c2):
     if os.path.exists(CAMINHO_CLIENTES):
-        df = pd.read_csv(CAMINHO_CLIENTES, sep=";")
+        try:
+            df = pd.read_csv(CAMINHO_CLIENTES, sep=";")
+        except Exception:
+            df = pd.DataFrame(columns=["Nome", "CACEAL1", "CACEAL2"])
     else:
         df = pd.DataFrame(columns=["Nome", "CACEAL1", "CACEAL2"])
 
@@ -29,10 +37,10 @@ def salvar_cliente(nome, c1, c2):
     df = pd.concat([df, novo], ignore_index=True)
     df.to_csv(CAMINHO_CLIENTES, index=False, sep=";")
 
-# MENU
+# MENU lateral
 aba = st.sidebar.radio("Menu", ["📋 Cadastrar Clientes", "🔎 Consultar Publicações"])
 
-# ABA 1 - CADASTRO
+# 📋 ABA DE CADASTRO
 if aba == "📋 Cadastrar Clientes":
     st.subheader("Cadastro de Clientes")
     with st.form("form_cadastro"):
@@ -48,7 +56,7 @@ if aba == "📋 Cadastrar Clientes":
     st.subheader("📄 Clientes Cadastrados")
     st.dataframe(carregar_clientes())
 
-# ABA 2 - CONSULTA
+# 🔎 ABA DE CONSULTA
 if aba == "🔎 Consultar Publicações":
     st.subheader("Consulta por Período")
     df_clientes = carregar_clientes()
@@ -58,8 +66,8 @@ if aba == "🔎 Consultar Publicações":
     else:
         cliente_sel = st.selectbox("👤 Selecione o cliente", df_clientes["Nome"].unique())
         dados_cliente = df_clientes[df_clientes["Nome"] == cliente_sel].iloc[0]
-        c1 = dados_cliente["CACEAL1"]
-        c2 = dados_cliente["CACEAL2"]
+        c1 = str(dados_cliente["CACEAL1"])
+        c2 = str(dados_cliente["CACEAL2"])
 
         col1, col2 = st.columns(2)
         with col1:
