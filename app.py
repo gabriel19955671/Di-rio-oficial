@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import os
@@ -113,7 +114,6 @@ if aba == "🔎 Consultar Publicações":
                 st.success("✅ Publicações encontradas.")
                 st.dataframe(df_resultado)
 
-                # Corrigido: botão de download com BytesIO
                 excel_buffer = BytesIO()
                 df_resultado.to_excel(excel_buffer, index=False, engine="openpyxl")
                 excel_buffer.seek(0)
