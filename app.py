@@ -15,20 +15,19 @@ CAMINHO_CLIENTES = "clientes.csv"
 
 def carregar_clientes():
     if os.path.exists(CAMINHO_CLIENTES):
-        return pd.read_csv(CAMINHO_CLIENTES, sep=",")
+        return pd.read_csv(CAMINHO_CLIENTES, sep=";")
     else:
         return pd.DataFrame(columns=["Nome", "CACEAL1", "CACEAL2"])
 
 def salvar_cliente(nome, c1, c2):
     if os.path.exists(CAMINHO_CLIENTES):
-        df = pd.read_csv(CAMINHO_CLIENTES, sep=",")
+        df = pd.read_csv(CAMINHO_CLIENTES, sep=";")
     else:
         df = pd.DataFrame(columns=["Nome", "CACEAL1", "CACEAL2"])
 
-    # Correção aplicada aqui — colunas fixas
     novo = pd.DataFrame([[nome, c1, c2]], columns=["Nome", "CACEAL1", "CACEAL2"])
     df = pd.concat([df, novo], ignore_index=True)
-    df.to_csv(CAMINHO_CLIENTES, index=False)
+    df.to_csv(CAMINHO_CLIENTES, index=False, sep=";")
 
 # MENU
 aba = st.sidebar.radio("Menu", ["📋 Cadastrar Clientes", "🔎 Consultar Publicações"])
