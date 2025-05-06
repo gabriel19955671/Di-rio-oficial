@@ -112,6 +112,17 @@ if aba == "🔎 Consultar Publicações":
                 df_resultado = pd.DataFrame(resultados)
                 st.success("✅ Publicações encontradas.")
                 st.dataframe(df_resultado)
-                st.download_button("📥 Baixar Excel", df_resultado.to_excel(index=False, engine="openpyxl"), file_name="resultado_consulta.xlsx")
+
+                # Corrigido: botão de download com BytesIO
+                excel_buffer = BytesIO()
+                df_resultado.to_excel(excel_buffer, index=False, engine="openpyxl")
+                excel_buffer.seek(0)
+
+                st.download_button(
+                    "📥 Baixar Excel",
+                    data=excel_buffer,
+                    file_name="resultado_consulta.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
             else:
                 st.warning("Nenhuma publicação encontrada no período informado.")
