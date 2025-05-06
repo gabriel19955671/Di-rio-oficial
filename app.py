@@ -25,7 +25,7 @@ def salvar_cliente(nome, c1, c2):
     else:
         df = pd.DataFrame(columns=["Nome", "CACEAL1", "CACEAL2"])
 
-    # ✅ Correção: colunas fixas, sem usar df.columns
+    # Correção aplicada aqui — colunas fixas
     novo = pd.DataFrame([[nome, c1, c2]], columns=["Nome", "CACEAL1", "CACEAL2"])
     df = pd.concat([df, novo], ignore_index=True)
     df.to_csv(CAMINHO_CLIENTES, index=False)
